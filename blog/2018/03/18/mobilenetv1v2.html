@@ -90,18 +90,29 @@
 
 
 
-<meta name="description" content="从cuda的软件结构入手，理解cuda流和事件的概念，并总结了一下常见的一些同步函数。">
+<meta name="description" content="MobileNet是谷歌出品的一个轻量级的神经网络结构，目标是用于移动和嵌入式，在保证了性能的情况下能够较大程度的降低参数量，本文主要介绍一下两代MobileNet的设计方式。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="【GPU编程系列之三】cuda stream和event相关内容">
-<meta property="og:url" content="https://chenrudan.github.io/blog/2015/07/22/cudastream.html">
+<meta property="og:title" content="浅析两代MobileNet">
+<meta property="og:url" content="https://chenrudan.github.io/blog/2018/03/18/mobilenetv1v2.html">
 <meta property="og:site_name" content="听见下雨的声音">
-<meta property="og:description" content="从cuda的软件结构入手，理解cuda流和事件的概念，并总结了一下常见的一些同步函数。">
-<meta property="og:image" content="http://7xkmdr.com1.z0.glb.clouddn.com/cuda-stream.png">
-<meta property="og:updated_time" content="2017-05-22T21:35:59.743Z">
+<meta property="og:description" content="MobileNet是谷歌出品的一个轻量级的神经网络结构，目标是用于移动和嵌入式，在保证了性能的情况下能够较大程度的降低参数量，本文主要介绍一下两代MobileNet的设计方式。">
+<meta property="og:image" content="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_1.png">
+<meta property="og:image" content="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_2.png">
+<meta property="og:image" content="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_3.png">
+<meta property="og:image" content="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_4.png">
+<meta property="og:image" content="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_5.png">
+<meta property="og:image" content="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_6.png">
+<meta property="og:image" content="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_7.png">
+<meta property="og:image" content="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_8.png">
+<meta property="og:image" content="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_12.png">
+<meta property="og:image" content="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_9.png">
+<meta property="og:image" content="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_10.png">
+<meta property="og:image" content="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_11.png">
+<meta property="og:updated_time" content="2018-04-05T08:31:03.206Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="【GPU编程系列之三】cuda stream和event相关内容">
-<meta name="twitter:description" content="从cuda的软件结构入手，理解cuda流和事件的概念，并总结了一下常见的一些同步函数。">
-<meta name="twitter:image" content="http://7xkmdr.com1.z0.glb.clouddn.com/cuda-stream.png">
+<meta name="twitter:title" content="浅析两代MobileNet">
+<meta name="twitter:description" content="MobileNet是谷歌出品的一个轻量级的神经网络结构，目标是用于移动和嵌入式，在保证了性能的情况下能够较大程度的降低参数量，本文主要介绍一下两代MobileNet的设计方式。">
+<meta name="twitter:image" content="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_1.png">
 
 
 
@@ -129,13 +140,13 @@
 
 
 
-  <link rel="canonical" href="https://chenrudan.github.io/blog/2015/07/22/cudastream.html"/>
+  <link rel="canonical" href="https://chenrudan.github.io/blog/2018/03/18/mobilenetv1v2.html"/>
 
 
 
 
 
-  <title>【GPU编程系列之三】cuda stream和event相关内容 | 听见下雨的声音</title>
+  <title>浅析两代MobileNet | 听见下雨的声音</title>
 
 
 
@@ -297,7 +308,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="https://chenrudan.github.io/blog/2015/07/22/cudastream.html">
+    <link itemprop="mainEntityOfPage" href="https://chenrudan.github.io/blog/2018/03/18/mobilenetv1v2.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Rudan Chen">
@@ -314,7 +325,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">【GPU编程系列之三】cuda stream和event相关内容</h1>
+          <h1 class="post-title" itemprop="name headline">浅析两代MobileNet</h1>
         
 
         <div class="post-meta">
@@ -326,8 +337,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2015-07-22T11:20:36+08:00">
-                2015-07-22
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-03-18T11:20:36+08:00">
+                2018-03-18
               </time>
             
 
@@ -349,8 +360,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/programming-languages/" itemprop="url" rel="index">
-                    <span itemprop="name">programming languages</span>
+                  <a href="/categories/algorithm/" itemprop="url" rel="index">
+                    <span itemprop="name">algorithm</span>
                   </a>
                 </span>
 
@@ -368,8 +379,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/blog/2015/07/22/cudastream.html#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="/blog/2015/07/22/cudastream.html" itemprop="commentsCount"></span>
+                <a href="/blog/2018/03/18/mobilenetv1v2.html#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="/blog/2018/03/18/mobilenetv1v2.html" itemprop="commentsCount"></span>
                 </a>
               </span>
               <!--/noindex-->
@@ -390,7 +401,7 @@
 
           
               <div class="post-description">
-                  从cuda的软件结构入手，理解cuda流和事件的概念，并总结了一下常见的一些同步函数。
+                  MobileNet是谷歌出品的一个轻量级的神经网络结构，目标是用于移动和嵌入式，在保证了性能的情况下能够较大程度的降低参数量，本文主要介绍一下两代MobileNet的设计方式。
               </div>
           
 
@@ -404,115 +415,72 @@
       
 
       
-        <p>本文主要理解CUDA streams和相关的概念，有的概念翻译成中文反而无法体现它的意思，因此基本上还是用英文。主要参考了《The CUDA Handbook》这本书。</p>
-<p><strong>contexts</strong></p>
-<p>首先介绍contexts，它类似于cpu中的进程，它作为一个容器，管理了所有对象的生命周期，大多数的CUDA函数调用需要context。这些对象如下：</p>
-<pre><code>所有分配内存
-Modules，类似于动态链接库，以.cubin和.ptx结尾
-CUDA streams，管理执行单元的并发性
-CUDA events
-texture和surface引用
-kernel里面使用到的本地内存（设备内存）
-用于调试、分析和同步的内部资源
-用于分页复制的固定缓冲区
-</code></pre><p>cuda runtime（软件层的库）不提供API直接接入CUDA context，而是通过<strong><em>延迟初始化</em></strong>（deferred initialization）来创建context，也就是lazy initialization。具体意思是在调用每一个CUDART库函数时，它会检查当前是否有context存在，假如需要context，那么才自动创建。也就是说需要创建上面这些对象的时候就会创建context。创建的这个context的特性跟程序之间给的要求有关，例如cudaSetDevice()（线程设置当前的context，这个函数并不需要context存在），cudaSetDeviceFlags()等。此处，可以显式的控制初始化，即调用cudaFree(0)，强制的初始化。cuda runtime将context和device的概念合并了，即在一个gpu上操作可看成在一个context下。因而cuda runtime提供的函数形式类似cudaDeviceSynchronize()而不是与driver API 对应的cuCtxSynchronize()。应用可以通过驱动API来访问当前context的栈。与context相关的操作，都是以cuCtxXXXX()的形式作为driver API实现。</p>
-<p>当context被销毁，里面分配的资源也都被销毁，一个context内分配的资源其他的context不能使用。在driver API中，每一个cpu线程都有一个<strong><em>current context</em></strong>的栈，新建新的context就入栈。针对每一个线程只能有一个出栈变成可使用的current context，而这个游离的context可以转移到另一个cpu线程，通过函数cuCtxPushCurrent/cuCtxPopCurrent来实现。</p>
-<h4 id="1-CUDA-streams"><a href="#1-CUDA-streams" class="headerlink" title="1.CUDA streams"></a>1.CUDA streams</h4><p>CUDA streams用来管理执行单元的并发，在一个流中，操作是串行的按序执行的，但是在不同的流中操作就可以同时执行，从而完成并发操作。其中包括如下一些操作：</p>
-<pre><code>管理GPU、CPU的并发
-当流处理器在执行kernel时可以调用内存复制引擎同时进行内存复制
-（不同？）核函数的并发
-多GPU的并发
-</code></pre><p>并发的例子如下[1]，代码1下面的操作就是同步的，没有异步的过程</p>
-<pre><code>cudaMalloc ( &amp;dev1, size ) ;
-double* host1 = (double*) malloc ( &amp;host1, size ) ;
-…
-cudaMemcpy ( dev1, host1, size, H2D ) ;
-kernel2 &lt;&lt;&lt; grid, block, 0 &gt;&gt;&gt; ( …, dev2, … ) ;
-kernel3 &lt;&lt;&lt; grid, block, 0 &gt;&gt;&gt; ( …, dev3, … ) ;
-cudaMemcpy ( host4, dev4, size, D2H ) ;
-</code></pre><p>而代码2的操作是异步的，全并发的，在不同的四个流中完成不同的操作。</p>
-<pre><code>cudaStream_t stream1, stream2, stream3, stream4 ;
-cudaStreamCreate ( &amp;stream1) ;
-...
-cudaMalloc ( &amp;dev1, size ) ;
-cudaMallocHost ( &amp;host1, size ) ; 
-…
-cudaMemcpyAsync ( dev1, host1, size, H2D, stream1 ) ;
-kernel2 &lt;&lt;&lt; grid, block, 0, stream2 &gt;&gt;&gt; ( …, dev2, … ) ;
-kernel3 &lt;&lt;&lt; grid, block, 0, stream3 &gt;&gt;&gt; ( …, dev3, … ) ;
-cudaMemcpyAsync ( host4, dev4, size, D2H, stream4 ) ;
-...
-</code></pre><p>同步异步的过程可以参考下图，其中的数字就代表了流编号。在第一张示例中，在一个stream 0上三个操作按序执行，第二张图中，第二个时间段，stream 1的kernel执行操作就和stream 2的内存复制操作时间重叠（overlap）了，从而做到了并发。</p>
-<p>摘自<a href="http://devblogs.nvidia.com/parallelforall/how-overlap-data-transfers-cuda-cc/" target="_blank" rel="external">http://devblogs.nvidia.com/parallelforall/how-overlap-data-transfers-cuda-cc/</a></p>
-<p><img src="http://7xkmdr.com1.z0.glb.clouddn.com/cuda-stream.png" alt="1" height="60%" width="60%" hspace="200"></p>
-<p>GPU上的一些操作是异步进行的，异步的意思就是gpu在它执行完任务之前就将控制全返回给主机线程，那么就能保证后面的cpu程序在执行的时候gpu的函数也在执行。也就是说在GPU上执行的一些操作和CPU上执行的函数能够异步进行。这些操作大致如下：</p>
-<pre><code>启动核函数
-在同一个设备上的内存复制
-小于64KB内存从主机复制到设备
-后缀带有Async的复制函数
-调用内存设置函数（设置共享内存、L1缓存大小等）
-</code></pre><p>在cuda7版本之前，没有显式指定流，空流（默认流）会被隐式指定，它要同步设备上的所有操作。一个设备会产生一个空流。其它流的工作完成之后空流的工作才能开始，空流工作完成后其它流才能开始。cuda7版本增加了新的特性，可以选择每一个主机线程使用独立的空流，即一个线程一个空流，避免了原来空流的按序执行。<a href="http://devblogs.nvidia.com/parallelforall/gpu-pro-tip-cuda-7-streams-simplify-concurrency/" target="_blank" rel="external">http://devblogs.nvidia.com/parallelforall/gpu-pro-tip-cuda-7-streams-simplify-concurrency/</a></p>
-<pre><code>//启动每个线程一个空流的方法
-//方法1
-nvcc --default-stream per-thread
-//方法2，在include CUDA头文件之前
-#define CUDA_API_PER_THREAD_DEFAULT_STREAM
-</code></pre><h4 id="2-CUDA-events"><a href="#2-CUDA-events" class="headerlink" title="2.CUDA events"></a>2.CUDA events</h4><p>CUDA events可以用来控制同步，包括cpu/gpu的同步、gpu上不同engine的同步和gpu之间的同步。此外可以用来检查gpu的操作时长。它能够向CUDA stream进行记录（record），cpu会等待event记录的这个地方完成才能执行下一步。</p>
-<p>例如用来计算程序运行时间的例子，省略掉了初始化的过程。cudaEventRecord的第二个参数是cudaStream_t stream = 0 。</p>
-<pre><code>cudaEventRecord(start, 0);
-for (int i = 0; i &lt; 2; ++i) {
-    cudaMemcpyAsync(inputDev + i * size, inputHost + i * size,
-                 size, cudaMemcpyHostToDevice, stream[i]);
-    MyKernel&lt;&lt;&lt;100, 512, 0, stream[i]&gt;&gt;&gt;
-                  (outputDev + i * size, inputDev + i * size, size);
-    cudaMemcpyAsync(outputHost + i * size, outputDev + i * size,
-                 size, cudaMemcpyDeviceToHost, stream[i]);
-}
-cudaEventRecord(stop, 0);
-cudaEventSynchronize(stop);
-float elapsedTime;
-cudaEventElapsedTime(&amp;elapsedTime, start, stop);
-</code></pre><table>
-<thead>
-<tr>
-<th>不同的同步函数原型</th>
-<th>函数意义</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>__host__ ​cudaError_t cudaEventSynchronize(cudaEvent_t event)</td>
-<td>等待event完成，才执行下一段</td>
-</tr>
-<tr>
-<td>CUresult cuEventSynchronize(CUevent hEvent)</td>
-<td>等待event完成，才执行下一段</td>
-</tr>
-<tr>
-<td>__host__ ​ __device__ ​cudaError_t cudaDeviceSynchronize(void)</td>
-<td>等待device上所有操作完成</td>
-</tr>
-<tr>
-<td>CUresult cuCtxSynchronize(void)</td>
-<td>等待context中所有操作完成，driver API对应cudaDeviceSynchronize()</td>
-</tr>
-<tr>
-<td>__host__ ​cudaError_t cudaThreadSynchronize(void)</td>
-<td>是cudaDeviceSynchronize的一个弃用版本，意义一样但是现在不用这个了</td>
-</tr>
-<tr>
-<td>__host__ ​cudaError_t cudaStreamSynchronize(cudaStream_t stream)</td>
-<td>等待传入的流中的操作完成</td>
-</tr>
-<tr>
-<td>CUresult cuStreamSynchronize(CUstream hStream)</td>
-<td>等待传入的流中的操作完成</td>
-</tr>
-</tbody>
-</table>
-<ol>
-<li><a href="http://on-demand.gputechconf.com/gtc-express/2011/presentations/StreamsAndConcurrencyWebinar.pdf" target="_blank" rel="external">http://on-demand.gputechconf.com/gtc-express/2011/presentations/StreamsAndConcurrencyWebinar.pdf</a></li>
-</ol>
+        <p>【转载请注明出处】<a href="http://chenrudan.github.io/">chenrudan.github.io</a></p>
+<p>MobileNet[1]是谷歌出品的一个轻量级的神经网络结构，经过一年的发展逐渐成为类似GoogleNet、ResNet一样的基础性网络结构，它的出发点是想构造精简、轻量级的神经网络，可以在性能有限的移动端上运行。可以认为它是一种网络压缩的方法，但是不同于其他压缩模型的方法的是，它不是在一个大的网络上进行剪枝、量化、分解等操作，而是给出了一个新的网络构造。今年一月又推出了第二个更为优化的版本[2]，具体的caffe实现可以参考[3]。</p>
+<h3 id="1">MobileNet v1</h3>
+
+<p>V1版本的核心是将正常的卷积分解为深度可分离卷积和1x1逐点卷积，正常的卷积假设输入M个feature map，输出N个feature map，卷积核的数量为M<em>N，假设每个卷积核大小为3</em>3，M个卷积核与M个输入map对应卷积并累加得到一个输出map，再用新的一组M个卷积核与输入map卷积得到下一个输出map。卷积过程可以看成两个步骤，一是卷积核在输入图片上提取特征，二是将提取的特征通过相加的方式融合成新的特征。</p>
+<p><img src="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_1.png" height="30%" width="30%" hspace="310"></p>
+<font size="2"><center>图1 传统卷积(图片来源[1])</center></font>
+
+<p>而mobilenet将传统卷积分解成了两个步骤，第一个步骤是深度可分离卷积DepthwiseConvolution，它只有M个3<em>3的卷积核，M个卷积核与M个输入map一一卷积得到M个map，它起到了提取特征的作用，第二个步骤是逐点卷积PointwiseConvolution，实际上就是传统的卷积，只是所有的卷积核都是1</em>1，一共有M<em>N个1</em>1，起到了融合已提取特征的作用。</p>
+<p><img src="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_2.png" height="30%" width="30%" hspace="310"></p>
+<font size="2"><center>图2 深度可分离卷积和逐点卷积(图片来源[1])</center></font>
+
+<p>这个过程中减少的计算量是什么？实际上就是提取特征的filter个数变少了，1*1的卷积过程实际上也就是矩阵乘法，不需要im2col函数来整合成特征图矩阵和卷积核矩阵。所以在论文中，传统卷积和两步卷积对应的计算量对比如下，分母是传统卷积的计算量，分子是两步卷积的计算量。</p>
+<p>$$<br>\frac{D_K\cdot D_K\cdot M\cdot D_F\cdot D_F+M\cdot N\cdot D_F\cdot D_F}<br>{D_K\cdot D_K\cdot M\cdot N\cdot D_F\cdot D_F}<br>= \frac{1}{N}+\frac{1}{D^2_K}<br>$$</p>
+<p>而在实现上，传统卷积是一层就实现，分解后的卷积需要两次来实现，在DW卷积和PW卷积之后都接上了bn层和relu层。</p>
+<p><img src="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_3.png" height="30%" width="30%" hspace="310"></p>
+<font size="2"><center>图3 深度可分离卷积和逐点卷积Caffe实现</center></font>
+
+<p>MobileNet一共有28层，整体的结构如下表所示。</p>
+<p><img src="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_4.png" height="50%" width="50%" hspace="310"></p>
+<font size="2"><center>图4 MobileNet整体网络结构</center></font>
+
+<p>此外，文章还定义了两个，第一个超参数是宽度乘子$\alpha$，通过它可以进一步减少计算量，它是一个缩放系数，原来卷积的输入输出channel乘以这个系数就是新的channel数量。第二个超参数是分辨率乘子$\rho$，它也是缩放系数，对象是特征图的大小，特征图尺寸乘以这个系数就是新的特征图尺寸。</p>
+<p>实验结果上来看，文章在Imagenet数据集上的分类任务中对比了28层的传统卷积与MobileNet，在最终准确率降低较少的情况下，正常卷积的计算量和参数量分别是MobileNet的8.55倍、6.98倍。</p>
+<p><img src="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_5.png" height="50%" width="50%" hspace="310"></p>
+<font size="2"><center>图5 对比传统卷积与MobileNet(图片来源[1])</center></font>
+
+<p>有意思的是文章对比了图6中窄的网络和浅的网络，从结果上来看，在两者计算量一致的情况下，窄的网络比浅的网络性能更好。</p>
+<p><img src="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_6.png" height="50%" width="50%" hspace="310"></p>
+<font size="2"><center>图6 对比浅形网络和窄形网络(图片来源[1])</center></font>
+
+<p>另外一个有意思的结论是文章统计了Imagenet分类准确率跟计算量和参数量之间的关系，最终发现与计算量、参数两都呈现了类似log函数的形式。</p>
+<p>文章还在多种任务上都进行了对比测试，大部分的结果都表明了MobileNet能够在保证一定准确率的情况下极大的减少计算量。</p>
+<h3 id="2">MobileNet v2</h3>
+
+<p>从上面v1的构成表格中可以发现，MobileNet是没有shortcut结构的深层网络，为了得到更轻量级性能更好准确率更高的网络，v2版本就尝试了在v1结构中加入shortcut的结构，且给出了新的设计结构，文中称为inverted residual with linear bottleneck，即线性瓶颈的反向残差结构。</p>
+<p>文章首先考虑了relu非线性函数的影响，我们知道relu函数只取输入的非负值，且认为这个行为导致了信息损失，而文章却给出了另一个结论。首先文章假设了每一层的特征图激活值形成了一种未知流形，虽然无法直接知道这个流形是什么，但是流形学习中最基本的想法就是高维数据能够映射到低维空间，因而这些激活值构成的流形也是能映射的。在神经网络中这种映射就体现在降低特征图的channel数，类似MobileNet v1中设置了一个超参数宽度乘子$\alpha$，但是问题是这个宽度因子如何选择？降低到多少channel数能够最大程度的保留所有的信息。映射到一个合适的低维空间即等价于通过这个乘子降低到合适的channel数，且作者认为在宽度乘子作用下能够使得激活值形成的低维流形能够占满整个低维空间。就是在这个条件之下，文章通过公式证明了只有在激活值能够得到输入空间的一个低维流形时，relu函数才能够保留完备的信息。这是第一个性质，另外一个性质是当输入都是非负值时，就算经过relu变换，本质上还是线性变换，这点是显而易见的。</p>
+<p>这个性质表明了激活值的channel数量较少时，relu无法保留完备的信息，会丢失很多信息，所以这种情况下不适合用relu，如图7所示，将原始二维信息，经过一个矩阵映射到高维空间中，再经过一个relu，反向映射回原始二维空间，由于原始的二维空间是n=15,30的低维流形，而不是n=2,3的低维流形，所以在n=2,3时信息丢失较多。</p>
+<p><img src="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_7.png" height="60%" width="60%" hspace="310"></p>
+<font size="2"><center>图7 低维流形映射到高维空间中relu的影响(图片来源[2])</center></font>
+
+<p>基于上述结论，文章提出了linear bottleneck layer，这个结构有三个卷积操作，即先通过1*1的PointwiseConvolution来提升channel数，再接一个DepthwiseConvolution，最后再用PointwiseConvolution将channel数量降下来。Bottleneck就体现在最后的这个降低channel数的PointwiseConvolution，根据之前对relu的研究，这种维数较低的channel之后再加relu会损失信息，所以linear则体现在最后的PointwiseConvolution之后不像之前一样接relu了。</p>
+<p><img src="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_8.png" height="30%" width="30%" hspace="310"></p>
+<font size="2"><center>图8 MobileNet v2结构(图片来源[2])</center></font>
+
+<p><img src="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_12.png" height="30%" width="30%" hspace="310"></p>
+<font size="2"><center>图9 MobileNet v2结构caffe实现</center></font>
+
+<p>从实验结果上来看线性层确实能够防止非线性破坏过多的信息。</p>
+<p><img src="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_9.png" height="30%" width="30%" hspace="310"></p>
+<font size="2"><center>图10 在线性层加入relu的影响(图片来源[2])</center></font>
+
+<p>为了获得更强的深层反向梯度传播能力，在v2版本中加入了shortcut连接方式，inverted residuals的inverted体现跟resnet相反的设计方式，传统的resnet模块，往往会将输入channel先用PointwiseConvolution降低，执行了正常的卷积操作之后再用PointwiseConvolution将channel增加还原，而本文的设计则跟这个方式刚好是反的。图10的结果中也可看出加入shortcut连接性能提升很多。</p>
+<p><img src="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_10.png" height="30%" width="30%" hspace="310"></p>
+<font size="2"><center>图11 加入shortcut的影响(图片来源[2])</center></font>
+
+<p>结合上述两个创新点之后，MobileNet V2的整体结构如图11，其中每一个bottleneck的结构如图8所示。</p>
+<p><img src="http://7xkmdr.com1.z0.glb.clouddn.com/mobilenet_11.png" height="30%" width="30%" hspace="310"></p>
+<font size="2"><center>图12 MobileNet V2整体网络结构</center></font>
+
+<h3 id="3">小结</h3>
+
+<p>有人说MobileNet没有创新点，有人说MobileNet是业界良心，个人觉得MobileNet是一个非常棒的网络，虽然很多东西不是它原创的，但是两个版本的实用性都非常强。</p>
+<p>[1] <a href="https://arxiv.org/pdf/1704.04861.pdf" target="_blank" rel="external">MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications</a></p>
+<p>[2] <a href="https://arxiv.org/abs/1801.04381" target="_blank" rel="external">Inverted Residuals and Linear Bottlenecks: Mobile Networks for Classification, Detection and Segmentation</a></p>
+<p>[3] <a href="https://github.com/shicai/MobileNet-Caffe" target="_blank" rel="external">MobileNet-Caffe</a></p>
 
       
     </div>
@@ -549,8 +517,8 @@ cudaEventElapsedTime(&amp;elapsedTime, start, stop);
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/blog/2015/05/07/cafferead.html" rel="next" title="[caffe]的项目架构和源码解析">
-                <i class="fa fa-chevron-left"></i> [caffe]的项目架构和源码解析
+              <a href="/blog/2018/03/10/updateubuntu1710.html" rel="next" title="解决ubuntu更新17.10后开机进不了桌面的问题">
+                <i class="fa fa-chevron-left"></i> 解决ubuntu更新17.10后开机进不了桌面的问题
               </a>
             
           </div>
@@ -558,10 +526,6 @@ cudaEventElapsedTime(&amp;elapsedTime, start, stop);
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/blog/2015/08/04/dl5tricks.html" rel="prev" title="[DeepLearning]深度学习之五常见tricks">
-                [DeepLearning]深度学习之五常见tricks <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -683,7 +647,7 @@ cudaEventElapsedTime(&amp;elapsedTime, start, stop);
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-CUDA-streams"><span class="nav-number">1.</span> <span class="nav-text">1.CUDA streams</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-CUDA-events"><span class="nav-number">2.</span> <span class="nav-text">2.CUDA events</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#1"><span class="nav-number">1.</span> <span class="nav-text">MobileNet v1</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2"><span class="nav-number">2.</span> <span class="nav-text">MobileNet v2</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3"><span class="nav-number">3.</span> <span class="nav-text">小结</span></a></li></ol></div>
             
 
           </div>
@@ -850,7 +814,7 @@ cudaEventElapsedTime(&amp;elapsedTime, start, stop);
 		_hcwp.push({widget:"Bloggerstream", widget_id: 102656, selector:".hc-comment-count", label: "{\%COUNT%\}" });
 
 		
-		_hcwp.push({widget:"Stream", widget_id: 102656, xid: "/blog/2015/07/22/cudastream.html"});
+		_hcwp.push({widget:"Stream", widget_id: 102656, xid: "/blog/2018/03/18/mobilenetv1v2.html"});
 		
 
 		(function() {
